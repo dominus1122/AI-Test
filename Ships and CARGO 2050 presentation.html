@@ -1,0 +1,911 @@
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050d18">
+  <title>Ships &amp; Cargo 2050 — Interactive Slideshow</title>
+  <style>
+    :root {
+      --navy: #050d18;
+      --navy-2: #091827;
+      --panel: rgba(13, 31, 48, .72);
+      --white: #f4f7f4;
+      --mist: #9eb0bc;
+      --cyan: #43e6df;
+      --blue: #3998ff;
+      --coral: #ff725e;
+      --amber: #ffc35c;
+      --green: #7be495;
+      --line: rgba(148, 203, 218, .18);
+      --pad: clamp(28px, 4.6vw, 74px);
+      --sans: "Aptos", "Segoe UI Variable", "Segoe UI", Arial, sans-serif;
+      --mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--navy); }
+    body { color: var(--white); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    button { font: inherit; }
+    svg { display: block; max-width: 100%; }
+
+    .deck { position: relative; width: 100vw; height: 100dvh; isolation: isolate; }
+    .deck::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 30; opacity: .16;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+
+    .slide {
+      position: absolute; inset: 0; overflow: hidden; display: grid; padding: var(--pad);
+      opacity: 0; visibility: hidden; transform: translate3d(3.5%,0,0) scale(.988);
+      background:
+        radial-gradient(circle at var(--gx, 82%) var(--gy, 15%), rgba(57,152,255,.12), transparent 29%),
+        radial-gradient(circle at 18% 88%, rgba(67,230,223,.07), transparent 30%),
+        var(--navy);
+      transition: opacity .55s ease, transform .72s cubic-bezier(.2,.8,.2,1), visibility 0s .72s;
+    }
+    .slide::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .55;
+      background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(135deg, #000, transparent 68%);
+    }
+    .slide.active { opacity: 1; visibility: visible; transform: none; z-index: 2; transition-delay: 0s; }
+    .slide.was-before { transform: translate3d(-3.5%,0,0) scale(.988); }
+    .slide > * { position: relative; z-index: 1; }
+    .slide-no { position: absolute; z-index: 5; top: var(--pad); right: var(--pad); color: rgba(255,255,255,.52); font: 700 10px/1 var(--mono); letter-spacing: .16em; }
+
+    .kicker { display: flex; align-items: center; gap: 11px; color: var(--cyan); font: 700 11px/1 var(--mono); letter-spacing: .17em; text-transform: uppercase; }
+    .kicker::before { content: ""; width: 26px; height: 2px; background: var(--coral); }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(56px, 8.2vw, 132px); line-height: .84; letter-spacing: -.067em; font-weight: 750; }
+    h2 { font-size: clamp(38px, 5.25vw, 82px); line-height: .94; letter-spacing: -.052em; font-weight: 735; }
+    h3 { font-size: clamp(16px, 1.45vw, 23px); line-height: 1.1; letter-spacing: -.022em; }
+    .lede { margin-top: 22px; max-width: 680px; color: #cad6dc; font-size: clamp(16px, 1.45vw, 22px); line-height: 1.45; }
+    .accent { color: var(--cyan); }
+    .coral { color: var(--coral); }
+    .amber { color: var(--amber); }
+    .micro { color: var(--mist); font: 600 9px/1.45 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .content { align-self: center; width: 100%; }
+    .two-col { display: grid; grid-template-columns: minmax(330px,.76fr) minmax(520px,1.24fr); align-items: center; gap: clamp(34px,5.5vw,90px); width: 100%; }
+    .visual-shell {
+      position: relative; min-height: min(67vh, 630px); border: 1px solid var(--line); overflow: hidden;
+      background: linear-gradient(145deg, rgba(16,38,59,.8), rgba(4,14,25,.65));
+      box-shadow: inset 0 0 60px rgba(0,0,0,.25), 0 30px 80px rgba(0,0,0,.2);
+    }
+    .visual-shell::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(90deg, transparent 49.8%, rgba(67,230,223,.07) 50%, transparent 50.2%),
+                  linear-gradient(transparent 49.8%, rgba(67,230,223,.07) 50%, transparent 50.2%);
+    }
+    .corner { position: absolute; width: 24px; height: 24px; border-color: rgba(67,230,223,.62); z-index: 4; }
+    .corner.tl { left: 12px; top: 12px; border-left: 1px solid; border-top: 1px solid; }
+    .corner.tr { right: 12px; top: 12px; border-right: 1px solid; border-top: 1px solid; }
+    .corner.bl { left: 12px; bottom: 12px; border-left: 1px solid; border-bottom: 1px solid; }
+    .corner.br { right: 12px; bottom: 12px; border-right: 1px solid; border-bottom: 1px solid; }
+    .hud-label { position: absolute; z-index: 4; color: rgba(204,225,232,.65); font: 600 8px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+
+    /* entry motion */
+    .reveal { opacity: 0; transform: translateY(18px); }
+    .slide.active .reveal { animation: rise .7s .08s both; }
+    .slide.active .d2 { animation-delay: .17s; }
+    .slide.active .d3 { animation-delay: .27s; }
+    .slide.active .d4 { animation-delay: .38s; }
+    .slide.active .d5 { animation-delay: .5s; }
+    .draw { stroke-dasharray: 900; stroke-dashoffset: 900; }
+    .slide.active .draw { animation: draw 1.8s .25s cubic-bezier(.3,.8,.25,1) forwards; }
+    .slide.active .loop-path { animation: dash 9s linear infinite; }
+    .slide.active .float { animation: float 4s ease-in-out infinite; }
+    .slide.active .pulse { animation: pulse 2.3s ease-out infinite; }
+    .slide.active .blink { animation: blink 1.8s ease-in-out infinite; }
+    .slide.active .spin { animation: spin 18s linear infinite; transform-origin: center; transform-box: fill-box; }
+    .slide.active .scan { animation: scan 3.4s ease-in-out infinite; }
+    .slide.active .travel { animation: travel 7s linear infinite; }
+    .deck.motion-paused *, .deck.motion-paused *::before, .deck.motion-paused *::after { animation-play-state: paused !important; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @keyframes dash { to { stroke-dashoffset: -180; } }
+    @keyframes float { 50% { transform: translateY(-8px); } }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(67,230,223,.44); } 75%,100% { box-shadow: 0 0 0 14px rgba(67,230,223,0); } }
+    @keyframes blink { 50% { opacity: .3; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes scan { 0%,100% { transform: translateY(-110%); opacity: 0; } 12%,82% { opacity: .75; } 90% { transform: translateY(520%); opacity: 0; } }
+    @keyframes travel { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+
+    /* 01 — horizon */
+    .cover { --gx: 72%; --gy: 42%; }
+    .cover-grid { display: grid; grid-template-columns: .76fr 1.24fr; align-items: center; gap: 20px; }
+    .cover h1 { margin-top: 24px; }
+    .cover .lede { max-width: 560px; }
+    .year-tag { display: inline-grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; margin-top: 30px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; color: #c7d5db; font-size: 11px; background: rgba(8,23,36,.55); }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); }
+    .ocean-scene { height: min(73vh,700px); position: relative; }
+    .ocean-scene svg { width: 100%; height: 100%; overflow: visible; }
+    .ocean-scene .route-orb { offset-path: path("M 80 440 C 260 310 420 370 700 155"); offset-rotate: 0deg; }
+    .metric-rail { position: absolute; right: 0; top: 17%; display: grid; gap: 8px; }
+    .metric { width: 128px; padding: 11px 12px; border-left: 2px solid var(--c); background: rgba(5,13,24,.74); backdrop-filter: blur(8px); }
+    .metric b { display: block; color: var(--c); font: 700 15px/1 var(--mono); }
+    .metric span { display: block; margin-top: 5px; color: var(--mist); font: 600 8px/1.3 var(--mono); text-transform: uppercase; }
+    .horizon-status { position: absolute; left: 4%; bottom: 5%; display: flex; gap: 16px; align-items: center; color: var(--mist); font: 600 8px/1 var(--mono); letter-spacing: .12em; }
+    .horizon-status i { width: 74px; height: 1px; background: linear-gradient(90deg,var(--cyan),transparent); }
+
+    /* 02 — system */
+    .system-map { display: grid; place-items: center; }
+    .system-map svg { width: 92%; height: auto; }
+    .system-facts { margin-top: 28px; display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .system-facts div { padding: 14px; border-top: 1px solid var(--line); background: rgba(255,255,255,.025); }
+    .system-facts b { display: block; color: var(--cyan); font: 700 10px/1 var(--mono); }
+    .system-facts span { display: block; margin-top: 7px; color: var(--mist); font-size: 11px; line-height: 1.35; }
+
+    /* 03 — forces */
+    .forces .content { align-self: center; }
+    .forces-head { display: flex; align-items: end; justify-content: space-between; gap: 30px; }
+    .forces-head .lede { max-width: 410px; text-align: right; }
+    .force-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 11px; margin-top: 34px; }
+    .force-card { min-height: 350px; border: 1px solid var(--line); padding: 20px; display: flex; flex-direction: column; background: linear-gradient(155deg, rgba(18,44,64,.72), rgba(7,19,31,.5)); overflow: hidden; }
+    .force-card .topline { display: flex; justify-content: space-between; color: var(--mist); font: 700 8px/1 var(--mono); letter-spacing: .1em; }
+    .force-viz { height: 142px; margin: 24px -5px 20px; position: relative; }
+    .force-viz svg { width: 100%; height: 100%; }
+    .force-card h3 { margin-top: auto; }
+    .force-card p { margin-top: 9px; color: var(--mist); font-size: 12px; line-height: 1.42; }
+    .force-card .bar { height: 3px; margin-top: 17px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .force-card .bar i { display: block; height: 100%; width: var(--w); background: var(--c); transform-origin: left; transform: scaleX(0); }
+    .slide.active .force-card .bar i { animation: grow 1.1s .6s ease forwards; }
+    @keyframes grow { to { transform: scaleX(1); } }
+
+    /* 04 — anatomy */
+    .anatomy { --gx: 42%; --gy: 65%; }
+    .anatomy .content { display: grid; grid-template-rows: auto 1fr; gap: 22px; align-self: stretch; }
+    .anatomy-head { max-width: 770px; }
+    .ship-blueprint { min-height: 0; height: 100%; position: relative; border-top: 1px solid var(--line); }
+    .ship-blueprint svg { width: 100%; height: 100%; }
+    .callout { position: absolute; width: 190px; padding: 10px 12px; border: 1px solid var(--line); background: rgba(5,16,28,.88); backdrop-filter: blur(10px); }
+    .callout b { display: block; color: var(--c); font: 700 9px/1 var(--mono); letter-spacing: .08em; }
+    .callout span { display: block; margin-top: 6px; color: #c0d0d7; font-size: 10px; line-height: 1.35; }
+    .callout.c1 { left: 1%; top: 17%; --c: var(--cyan); }
+    .callout.c2 { right: 1%; top: 12%; --c: var(--amber); }
+    .callout.c3 { left: 5%; bottom: 14%; --c: var(--blue); }
+    .callout.c4 { right: 2%; bottom: 15%; --c: var(--coral); }
+    .scan-line { position: absolute; left: 22%; right: 22%; top: 22%; height: 1px; background: linear-gradient(90deg,transparent,var(--cyan),transparent); box-shadow: 0 0 14px var(--cyan); }
+
+    /* 05 — energy */
+    .energy-board { display: grid; grid-template-columns: 1.1fr .9fr; min-height: min(66vh,630px); }
+    .fuel-matrix { padding: 28px; border-right: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr; }
+    .matrix { margin-top: 20px; display: grid; grid-template-columns: 108px repeat(4,1fr); grid-template-rows: 34px repeat(4,1fr); gap: 6px; }
+    .matrix > div { display: grid; place-items: center; min-height: 58px; font: 700 8px/1.2 var(--mono); color: var(--mist); text-align: center; }
+    .matrix .cell { position: relative; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.07); overflow: hidden; }
+    .matrix .cell::after { content: ""; position: absolute; inset: auto 0 0; height: var(--v); background: linear-gradient(0deg,var(--c),transparent); opacity: .5; transform: translateY(100%); }
+    .slide.active .matrix .cell::after { animation: fill .9s var(--delay,.4s) ease forwards; }
+    @keyframes fill { to { transform: none; } }
+    .energy-flow { padding: 28px; display: flex; flex-direction: column; justify-content: space-between; }
+    .route-case { padding: 16px; border: 1px solid var(--line); background: rgba(255,255,255,.025); }
+    .route-case + .route-case { margin-top: 9px; }
+    .route-case header { display: flex; justify-content: space-between; color: var(--white); font-size: 12px; font-weight: 700; }
+    .route-case header span { color: var(--cyan); font: 700 9px/1 var(--mono); }
+    .route-line { position: relative; height: 24px; margin-top: 12px; border-top: 1px dashed rgba(67,230,223,.3); }
+    .route-line::before, .route-line::after { content: ""; position: absolute; top: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--coral); }
+    .route-line::before { left: 0; }.route-line::after { right: 0; }
+    .energy-key { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .energy-key i { font: 700 8px/1 var(--mono); font-style: normal; padding: 8px 9px; border: 1px solid currentColor; }
+
+    /* 06 — autonomy */
+    .autonomy-grid { display: grid; grid-template-columns: .7fr 1.3fr; gap: 46px; align-items: center; }
+    .level-list { margin-top: 28px; display: grid; gap: 8px; }
+    .level { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.025); }
+    .level b { color: var(--cyan); font: 700 10px/1 var(--mono); }
+    .level span { font-size: 12px; color: #d5e0e5; }.level i { color: var(--mist); font: 600 8px/1 var(--mono); font-style: normal; }
+    .control-room { min-height: min(66vh,620px); padding: 20px; display: grid; grid-template-columns: 1.35fr .65fr; grid-template-rows: 1fr .42fr; gap: 10px; }
+    .sea-lane { position: relative; grid-row: 1 / 3; overflow: hidden; border: 1px solid var(--line); background: radial-gradient(circle at 52% 46%, rgba(57,152,255,.13),transparent 30%), #071522; }
+    .sea-lane svg { width: 100%; height: 100%; }
+    .lane-vessel { offset-path: path("M 65 510 C 100 390 270 340 300 220 C 330 110 440 120 515 55"); offset-rotate: auto; width: 18px; height: 8px; position: absolute; left: 0; top: 0; border-radius: 70% 20% 20% 70%; background: var(--coral); box-shadow: 0 0 12px var(--coral); }
+    .mini-panel { border: 1px solid var(--line); padding: 14px; background: rgba(255,255,255,.025); overflow: hidden; }
+    .mini-panel header { display: flex; justify-content: space-between; color: var(--mist); font: 700 8px/1 var(--mono); text-transform: uppercase; }
+    .decision-bars { margin-top: 18px; display: grid; gap: 10px; }
+    .decision-bars div { height: 5px; background: rgba(255,255,255,.08); }
+    .decision-bars i { display: block; height: 100%; width: var(--w); background: var(--c); transform-origin: left; }
+    .slide.active .decision-bars i { animation: breathe 2.8s ease-in-out infinite; }
+    @keyframes breathe { 50% { transform: scaleX(.78); opacity: .55; } }
+    .human-token { margin-top: 17px; display: grid; grid-template-columns: 34px 1fr; gap: 11px; align-items: center; }
+    .human-token i { width: 34px; height: 34px; border: 1px solid var(--coral); border-radius: 50%; display: grid; place-items: center; color: var(--coral); font: 800 11px/1 var(--mono); font-style: normal; }
+    .human-token span { color: #d6e0e4; font-size: 10px; line-height: 1.4; }
+
+    /* 07 — cargo */
+    .cargo-stage { min-height: min(68vh,640px); display: grid; grid-template-columns: 1fr .7fr; gap: 14px; }
+    .container-lab { position: relative; border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at 48% 50%,rgba(67,230,223,.12),transparent 37%); }
+    .container-lab::after { content: ""; position: absolute; width: 75%; height: 42%; border-radius: 50%; border: 1px solid rgba(67,230,223,.14); transform: rotateX(68deg); box-shadow: 0 0 60px rgba(67,230,223,.08); }
+    .cargo-box { width: min(58%,390px); aspect-ratio: 1.7; position: relative; z-index: 2; transform: perspective(850px) rotateX(-6deg) rotateY(-20deg); background: linear-gradient(90deg,#102d41,#16435b); border: 2px solid #4e8ba1; box-shadow: 26px 28px 45px rgba(0,0,0,.4), inset 0 0 34px rgba(67,230,223,.08); }
+    .cargo-box::before { content: ""; position: absolute; inset: 7%; background: repeating-linear-gradient(90deg,transparent 0 11%,rgba(91,173,194,.25) 11.4% 12%); border: 1px solid rgba(147,216,228,.2); }
+    .cargo-box::after { content: "NX–48 / ACTIVE"; position: absolute; left: 8%; bottom: 10%; color: var(--cyan); font: 700 8px/1 var(--mono); letter-spacing: .12em; }
+    .seal { position: absolute; z-index: 3; right: 16%; top: 20%; width: 38px; height: 38px; border: 1px solid var(--coral); border-radius: 50%; color: var(--coral); display: grid; place-items: center; font: 800 9px/1 var(--mono); background: #0b1a29; }
+    .sensor-node { position: absolute; z-index: 5; left: var(--x); top: var(--y); width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+    .sensor-node::after { content: attr(data-label); position: absolute; left: 17px; top: -4px; width: 110px; color: var(--c); font: 700 8px/1 var(--mono); }
+    .cargo-data { display: grid; grid-template-rows: auto 1fr auto; gap: 12px; }
+    .cargo-summary { border: 1px solid var(--line); padding: 18px; background: var(--panel); }
+    .cargo-summary strong { display: block; font-size: 32px; letter-spacing: -.04em; }
+    .cargo-summary span { color: var(--green); font: 700 9px/1 var(--mono); }
+    .telemetry { border: 1px solid var(--line); padding: 16px; overflow: hidden; }
+    .telemetry svg { width: 100%; height: 100%; min-height: 190px; }
+    .cargo-events { display: grid; gap: 6px; }
+    .cargo-events div { display: flex; justify-content: space-between; padding: 10px; background: rgba(255,255,255,.035); color: #cbd8de; font-size: 10px; }
+    .cargo-events time { color: var(--mist); font: 700 8px/1 var(--mono); }
+
+    /* 08 — port */
+    .port-layout { display: grid; grid-template-rows: auto 1fr; gap: 22px; align-self: stretch; }
+    .port-head { display: flex; align-items: end; justify-content: space-between; gap: 30px; }
+    .port-head .lede { max-width: 500px; text-align: right; }
+    .port-ops { min-height: 0; display: grid; grid-template-columns: 1fr 220px; gap: 12px; }
+    .port-map { position: relative; border: 1px solid var(--line); overflow: hidden; background: linear-gradient(#0b2335 0 36%,#0d1a24 36% 100%); }
+    .port-map svg { width: 100%; height: 100%; }
+    .crane-hook { animation: hook 4.8s ease-in-out infinite; transform-origin: top; transform-box: fill-box; }
+    .crane-hook.delay { animation-delay: -2.1s; }
+    @keyframes hook { 0%,100% { transform: translateY(-18px); } 45%,60% { transform: translateY(64px); } }
+    .agv { animation: agv 7s linear infinite; }
+    .agv.delay { animation-delay: -3.4s; }
+    @keyframes agv { from { transform: translateX(-120px); } to { transform: translateX(920px); } }
+    .port-kpis { display: grid; grid-template-rows: repeat(4,1fr); gap: 8px; }
+    .port-kpi { padding: 14px; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; justify-content: space-between; }
+    .port-kpi small { color: var(--mist); font: 700 8px/1.3 var(--mono); text-transform: uppercase; }
+    .port-kpi strong { color: var(--c); font: 700 clamp(20px,2.2vw,34px)/1 var(--mono); }
+    .port-kpi i { height: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .port-kpi i::after { content: ""; display: block; height: 100%; width: var(--w); background: var(--c); }
+
+    /* 09 — network */
+    .globe-stage { position: relative; display: grid; place-items: center; }
+    .globe-stage svg { width: 100%; height: 100%; }
+    .packet { offset-path: var(--path); offset-rotate: 0deg; position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 12px var(--coral); }
+    .packet.p1 { --path:path("M 110 380 C 250 70 480 80 690 270"); animation-delay: -1s; }
+    .packet.p2 { --path:path("M 120 260 C 320 510 530 480 700 160"); animation-delay: -4s; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+    .packet.p3 { --path:path("M 180 120 C 350 270 500 270 690 410"); animation-delay: -2.5s; background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+    .network-events { margin-top: 26px; display: grid; gap: 7px; }
+    .network-events div { display: grid; grid-template-columns: 54px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .network-events time { color: var(--coral); font: 700 9px/1 var(--mono); }
+    .network-events span { color: #c9d5db; font-size: 11px; }
+
+    /* 10 — risk */
+    .risk-board { display: grid; grid-template-columns: 1.08fr .92fr; min-height: min(66vh,620px); }
+    .radar { display: grid; place-items: center; position: relative; border-right: 1px solid var(--line); }
+    .radar svg { width: 92%; height: 92%; }
+    .risk-list { padding: 24px; display: grid; grid-template-rows: repeat(4,1fr); gap: 8px; }
+    .risk-row { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--line); background: rgba(255,255,255,.025); }
+    .risk-row > b { color: var(--coral); font: 800 18px/1 var(--mono); }
+    .risk-row h3 { font-size: 14px; }.risk-row p { margin-top: 4px; color: var(--mist); font-size: 10px; line-height: 1.35; }
+    .severity { font: 700 8px/1 var(--mono); padding: 6px 7px; border: 1px solid currentColor; }
+
+    /* 11 — people */
+    .people-board { min-height: min(67vh,630px); display: grid; grid-template-columns: .82fr 1.18fr; gap: 12px; }
+    .role-orbit { position: relative; display: grid; place-items: center; border: 1px solid var(--line); overflow: hidden; }
+    .role-center { position: relative; z-index: 3; width: 142px; height: 142px; border: 1px solid var(--cyan); border-radius: 50%; display: grid; place-items: center; text-align: center; color: var(--cyan); font: 800 11px/1.45 var(--mono); box-shadow: 0 0 45px rgba(67,230,223,.12); }
+    .orbit-ring { position: absolute; width: 76%; aspect-ratio: 1; border: 1px dashed rgba(67,230,223,.26); border-radius: 50%; }
+    .orbit-ring.r2 { width: 48%; }
+    .role-chip { position: absolute; left: var(--x); top: var(--y); padding: 9px 11px; border: 1px solid var(--line); background: #0b1a29; color: #d5e2e6; font: 700 8px/1 var(--mono); z-index: 4; }
+    .handoff { padding: 22px; display: grid; grid-template-rows: auto 1fr auto; gap: 14px; border: 1px solid var(--line); }
+    .handoff header { display: flex; justify-content: space-between; align-items: center; }
+    .handoff header b { font-size: 14px; }.handoff header span { color: var(--green); font: 700 8px/1 var(--mono); }
+    .handoff-flow { display: grid; grid-template-rows: repeat(4,1fr); gap: 9px; }
+    .handoff-step { display: grid; grid-template-columns: 42px 1fr 70px; align-items: center; gap: 12px; padding: 12px; background: rgba(255,255,255,.03); border-left: 2px solid var(--c); }
+    .handoff-step b { color: var(--c); font: 800 10px/1 var(--mono); }.handoff-step span { font-size: 11px; color: #d2dde2; }.handoff-step i { color: var(--mist); font: 700 8px/1 var(--mono); font-style: normal; text-align: right; }
+    .skill-strip { display: flex; gap: 6px; flex-wrap: wrap; }
+    .skill-strip span { padding: 8px; border: 1px solid var(--line); color: var(--mist); font: 700 7px/1 var(--mono); }
+
+    /* 12 — finale */
+    .finale { place-items: center; text-align: center; --gx: 50%; --gy: 50%; }
+    .finale .content { max-width: 1100px; }
+    .finale h2 { margin-top: 19px; font-size: clamp(50px,7.3vw,112px); }
+    .finale .lede { margin: 22px auto 0; max-width: 720px; }
+    .convergence { width: min(84vw,1000px); height: 220px; margin: 14px auto 0; position: relative; }
+    .convergence svg { width: 100%; height: 100%; overflow: visible; }
+    .final-tags { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+    .final-tags span { padding: 8px 10px; border: 1px solid var(--line); color: var(--mist); font: 700 8px/1 var(--mono); }
+
+    /* controls */
+    .chrome { position: fixed; z-index: 40; left: 18px; right: 18px; bottom: 14px; display: flex; align-items: center; gap: 16px; pointer-events: none; }
+    .counter { min-width: 54px; color: rgba(255,255,255,.78); font: 700 10px/1 var(--mono); letter-spacing: .1em; }
+    .progress { flex: 1; height: 2px; background: rgba(255,255,255,.13); overflow: hidden; }
+    .progress i { display: block; width: 8.33%; height: 100%; background: linear-gradient(90deg,var(--coral),var(--cyan)); transition: width .4s ease; }
+    .controls { display: flex; gap: 7px; pointer-events: auto; }
+    .control { width: 36px; height: 36px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; color: white; background: rgba(5,13,24,.7); display: grid; place-items: center; cursor: pointer; backdrop-filter: blur(12px); transition: .2s; }
+    .control:hover { color: var(--cyan); border-color: var(--cyan); transform: translateY(-2px); }
+    .control:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+    .control:disabled { opacity: .25; transform: none; cursor: default; }
+    .motion-icon { width: 11px; height: 11px; border-left: 3px solid currentColor; border-right: 3px solid currentColor; }
+    .deck.motion-paused ~ .chrome .motion-icon { border: 0; width: 0; height: 0; border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 9px solid currentColor; }
+
+    .overview { position: fixed; inset: 0; z-index: 60; padding: 34px; background: rgba(3,10,18,.97); backdrop-filter: blur(20px); display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; overflow: auto; opacity: 0; visibility: hidden; transition: .25s; }
+    .overview.open { opacity: 1; visibility: visible; }
+    .thumb { min-height: 155px; border: 1px solid var(--line); padding: 17px; background: linear-gradient(145deg,#10283b,#07131f); color: white; cursor: pointer; text-align: left; display: flex; flex-direction: column; justify-content: space-between; transition: .2s; }
+    .thumb:hover, .thumb.current { border-color: var(--cyan); transform: translateY(-2px); }
+    .thumb b { color: var(--cyan); font: 800 10px/1 var(--mono); }.thumb span { font-size: 18px; font-weight: 700; letter-spacing: -.025em; }
+
+    @media (max-width: 980px) {
+      :root { --pad: 28px; }
+      .two-col, .cover-grid, .autonomy-grid { grid-template-columns: .9fr 1.1fr; gap: 24px; }
+      .force-grid { grid-template-columns: 1fr 1fr; }.force-card { min-height: 220px; }.force-viz { height: 80px; margin: 12px 0; }
+      .visual-shell { min-height: 520px; }.overview { grid-template-columns: repeat(3,1fr); }
+      .metric-rail { display: none; }.callout { width: 150px; }
+    }
+    @media (max-width: 720px) {
+      .slide { overflow-y: auto; padding-bottom: 74px; }
+      .two-col, .cover-grid, .autonomy-grid { grid-template-columns: 1fr; align-content: start; gap: 20px; }
+      .cover-grid { padding-top: 42px; }.cover h1 { font-size: 60px; }.ocean-scene { height: 390px; }
+      .forces-head, .port-head { display: block; }.forces-head .lede, .port-head .lede { text-align: left; }
+      .force-grid { grid-template-columns: 1fr 1fr; }.force-card { min-height: 190px; }
+      .force-viz { display: none; }.visual-shell { min-height: 430px; }
+      .anatomy .content { display: block; }.ship-blueprint { height: 470px; margin-top: 20px; }.callout { width: 130px; }
+      .energy-board, .risk-board, .people-board, .cargo-stage { grid-template-columns: 1fr; }
+      .fuel-matrix, .radar { border-right: 0; border-bottom: 1px solid var(--line); }
+      .matrix { grid-template-columns: 78px repeat(4,1fr); }.port-ops { grid-template-columns: 1fr; }.port-map { min-height: 380px; }.port-kpis { grid-template-columns: repeat(4,1fr); grid-template-rows: none; }
+      .port-kpi { min-height: 95px; }.overview { grid-template-columns: repeat(2,1fr); }
+    }
+    @media (max-height: 720px) and (min-width: 721px) {
+      :root { --pad: 24px 4.5vw 58px; }
+      h2 { font-size: clamp(34px,4.6vw,62px); }.lede { margin-top: 12px; font-size: 15px; }
+      .visual-shell, .control-room, .cargo-stage, .people-board, .risk-board, .energy-board { min-height: 510px; max-height: 70vh; }
+      .force-grid { margin-top: 20px; }.force-card { min-height: 270px; }.force-viz { height: 100px; margin: 15px 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck" aria-label="Ships and Cargo in 2050 slideshow">
+
+    <!-- 01 -->
+    <section class="slide cover active" data-title="A new ocean economy" aria-hidden="false">
+      <span class="slide-no">01 / 12</span>
+      <div class="content cover-grid">
+        <div>
+          <div class="kicker reveal">A maritime scenario</div>
+          <h1 class="reveal d2">Ships &amp;<br><span class="accent">Cargo</span></h1>
+          <p class="lede reveal d3">The ocean economy of 2050 will be cleaner, autonomous by degrees, and coordinated in real time.</p>
+          <div class="year-tag reveal d4"><i class="live-dot pulse"></i><span>System forecast / horizon 2050</span></div>
+        </div>
+        <div class="ocean-scene reveal d2" aria-label="Animated futuristic cargo vessel">
+          <svg viewBox="0 0 760 620" role="img">
+            <defs>
+              <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0b2d46"/><stop offset="1" stop-color="#06111d"/></linearGradient>
+              <linearGradient id="hull" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#24526a"/><stop offset=".7" stop-color="#0d2638"/><stop offset="1" stop-color="#07121e"/></linearGradient>
+              <linearGradient id="sail" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#43e6df" stop-opacity=".6"/><stop offset=".55" stop-color="#4d9ee7" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity=".5"/></linearGradient>
+              <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <path d="M0 350 C140 325 218 370 360 340 C520 305 620 330 760 292 L760 620 L0 620Z" fill="url(#sea)"/>
+            <g opacity=".22" stroke="#65c9dd" fill="none">
+              <path class="loop-path" stroke-dasharray="12 14" d="M0 404 C180 370 360 430 760 358"/>
+              <path class="loop-path" stroke-dasharray="8 18" d="M0 470 C220 430 480 500 760 420"/>
+              <path class="loop-path" stroke-dasharray="18 22" d="M20 550 C240 490 530 575 760 490"/>
+            </g>
+            <g opacity=".36" fill="#183a50">
+              <rect x="590" y="206" width="14" height="107"/><rect x="613" y="175" width="20" height="138"/><rect x="643" y="226" width="12" height="87"/><rect x="665" y="193" width="28" height="120"/><rect x="704" y="157" width="10" height="156"/>
+            </g>
+            <g class="float">
+              <path d="M190 380 L570 334 L694 374 L648 445 L280 458 L174 420Z" fill="url(#hull)" stroke="#4a91ad" stroke-width="2"/>
+              <path d="M267 365 L557 338 L623 365 L295 397Z" fill="#173b50" stroke="#4c8298"/>
+              <g fill="#1d5268" stroke="#4b91a8" stroke-width=".7">
+                <rect x="306" y="340" width="48" height="25"/><rect x="357" y="335" width="48" height="25"/><rect x="408" y="330" width="48" height="25"/><rect x="459" y="325" width="48" height="25"/>
+                <rect x="330" y="312" width="48" height="23"/><rect x="381" y="307" width="48" height="23"/><rect x="432" y="302" width="48" height="23"/>
+              </g>
+              <g fill="url(#sail)" stroke="#67f3ec">
+                <path d="M330 300 L339 124 Q376 164 362 297Z"/><path d="M409 292 L418 82 Q456 136 438 289Z"/><path d="M491 284 L500 139 Q532 173 520 281Z"/>
+              </g>
+              <g stroke="#43e6df" opacity=".6"><path d="M339 124 L350 298"/><path d="M418 82 L424 290"/><path d="M500 139 L507 282"/></g>
+              <path d="M586 349 L625 356 L648 376 L585 370Z" fill="#d1edf1" opacity=".7"/>
+              <circle cx="662" cy="398" r="4" fill="#ff725e" filter="url(#glow)"/>
+            </g>
+            <path d="M80 440 C260 310 420 370 700 155" fill="none" stroke="#43e6df" stroke-width="1.3" stroke-dasharray="4 10" opacity=".75"/>
+            <circle class="route-orb travel" cx="0" cy="0" r="5" fill="#ff725e" filter="url(#glow)"/>
+            <g fill="#43e6df" font-family="monospace" font-size="8" letter-spacing="1">
+              <text x="82" y="456">SG SIN / NODE 14</text><text x="620" y="142">EU NORTH / ETA 4.8D</text>
+            </g>
+          </svg>
+          <div class="metric-rail">
+            <div class="metric" style="--c:var(--cyan)"><b>−82%</b><span>Voyage carbon intensity</span></div>
+            <div class="metric" style="--c:var(--amber)"><b>03</b><span>Energy modes active</span></div>
+            <div class="metric" style="--c:var(--coral)"><b>99.4</b><span>System confidence</span></div>
+          </div>
+          <div class="horizon-status"><i></i> WIND ASSIST · SMART CARGO · ADAPTIVE ROUTING</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="slide" data-title="The ship becomes a system" aria-hidden="true">
+      <span class="slide-no">02 / 12</span>
+      <div class="content two-col">
+        <div>
+          <div class="kicker reveal">The core idea</div>
+          <h2 class="reveal d2">Not a faster ship.<br>A <span class="accent">smarter system.</span></h2>
+          <p class="lede reveal d3">The breakthrough comes when vessel, cargo, port, energy, and people share one operating picture.</p>
+          <div class="system-facts reveal d4">
+            <div><b>SENSE</b><span>Every asset gains awareness.</span></div>
+            <div><b>DECIDE</b><span>Every route becomes adaptive.</span></div>
+            <div><b>COORDINATE</b><span>Every handoff becomes visible.</span></div>
+          </div>
+        </div>
+        <div class="visual-shell system-map reveal d3">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <span class="hud-label" style="left:24px;top:24px">SYSTEM ARCHITECTURE / 2050</span>
+          <svg viewBox="0 0 700 560" aria-label="Connected maritime system diagram">
+            <defs><filter id="g2"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <g class="spin" fill="none" stroke="#43e6df" opacity=".25">
+              <circle cx="350" cy="280" r="204" stroke-dasharray="3 11"/><circle cx="350" cy="280" r="154" stroke-dasharray="18 12"/><circle cx="350" cy="280" r="104" stroke-dasharray="2 9"/>
+            </g>
+            <g fill="none" stroke="#4f8096" stroke-width="1">
+              <path class="draw" d="M350 280 L350 76"/><path class="draw" d="M350 280 L544 217"/><path class="draw" d="M350 280 L470 446"/><path class="draw" d="M350 280 L230 446"/><path class="draw" d="M350 280 L156 217"/>
+            </g>
+            <g font-family="monospace" text-anchor="middle">
+              <circle cx="350" cy="280" r="69" fill="#0d293b" stroke="#43e6df" stroke-width="2" filter="url(#g2)"/>
+              <text x="350" y="274" fill="#fff" font-size="22" font-weight="700">FLOW</text><text x="350" y="296" fill="#43e6df" font-size="9" letter-spacing="2">ONE SYSTEM</text>
+              <g><circle cx="350" cy="76" r="48" fill="#0c2131" stroke="#3998ff"/><text x="350" y="72" fill="#fff" font-size="12">VESSEL</text><text x="350" y="89" fill="#8fa9b6" font-size="8">ENERGY PLATFORM</text></g>
+              <g><circle cx="544" cy="217" r="48" fill="#0c2131" stroke="#ffc35c"/><text x="544" y="213" fill="#fff" font-size="12">CARGO</text><text x="544" y="230" fill="#8fa9b6" font-size="8">LIVE STATE</text></g>
+              <g><circle cx="470" cy="446" r="48" fill="#0c2131" stroke="#43e6df"/><text x="470" y="442" fill="#fff" font-size="12">PORT</text><text x="470" y="459" fill="#8fa9b6" font-size="8">ORCHESTRATOR</text></g>
+              <g><circle cx="230" cy="446" r="48" fill="#0c2131" stroke="#7be495"/><text x="230" y="442" fill="#fff" font-size="12">ENERGY</text><text x="230" y="459" fill="#8fa9b6" font-size="8">MULTI-MODAL</text></g>
+              <g><circle cx="156" cy="217" r="48" fill="#0c2131" stroke="#ff725e"/><text x="156" y="213" fill="#fff" font-size="12">HUMANS</text><text x="156" y="230" fill="#8fa9b6" font-size="8">AUTHORITY</text></g>
+            </g>
+            <g fill="#43e6df" filter="url(#g2)">
+              <circle class="pulse" cx="350" cy="178" r="4"/><circle class="pulse" cx="447" cy="249" r="4"/><circle class="pulse" cx="411" cy="364" r="4"/><circle class="pulse" cx="289" cy="364" r="4"/><circle class="pulse" cx="253" cy="249" r="4"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="slide forces" data-title="Four forces of change" aria-hidden="true">
+      <span class="slide-no">03 / 12</span>
+      <div class="content">
+        <div class="forces-head">
+          <div><div class="kicker reveal">The pressure field</div><h2 class="reveal d2">Four forces reshape<br><span class="accent">the ocean economy.</span></h2></div>
+          <p class="lede reveal d3">Technology is only one current. Regulation, climate, and radical transparency pull just as hard.</p>
+        </div>
+        <div class="force-grid reveal d4">
+          <article class="force-card">
+            <div class="topline"><span>01 / CARBON</span><span>PRESSURE ↑</span></div>
+            <div class="force-viz"><svg viewBox="0 0 220 140"><g stroke="#28475a" opacity=".7"><path d="M10 20H210M10 60H210M10 100H210M50 10V130M110 10V130M170 10V130"/></g><path class="draw" d="M12 26 C48 34 58 42 86 53 S128 75 154 91 S188 111 208 122" fill="none" stroke="#ff725e" stroke-width="3"/><path d="M12 122H208" stroke="#43e6df" stroke-dasharray="4 8"/><circle cx="208" cy="122" r="5" fill="#43e6df"/></svg></div>
+            <h3>Carbon becomes currency</h3><p>Emissions move from annual reporting into every routing and procurement decision.</p><div class="bar"><i style="--w:92%;--c:var(--coral)"></i></div>
+          </article>
+          <article class="force-card">
+            <div class="topline"><span>02 / INTELLIGENCE</span><span>NODES ↑</span></div>
+            <div class="force-viz"><svg viewBox="0 0 220 140"><g stroke="#3998ff" opacity=".55"><path class="draw" d="M28 92L76 38L115 75L168 26L196 94L142 116L76 112Z"/><path class="draw" d="M76 38L76 112M115 75L196 94M115 75L142 116M168 26L142 116"/></g><g fill="#43e6df"><circle class="pulse" cx="28" cy="92" r="5"/><circle cx="76" cy="38" r="5"/><circle cx="115" cy="75" r="7"/><circle cx="168" cy="26" r="5"/><circle cx="196" cy="94" r="5"/><circle cx="142" cy="116" r="5"/><circle cx="76" cy="112" r="5"/></g></svg></div>
+            <h3>Machines gain context</h3><p>Models fuse ocean, machinery, cargo, and market signals into continuous decisions.</p><div class="bar"><i style="--w:84%;--c:var(--blue)"></i></div>
+          </article>
+          <article class="force-card">
+            <div class="topline"><span>03 / CLIMATE</span><span>VOLATILITY ↑</span></div>
+            <div class="force-viz"><svg viewBox="0 0 220 140"><g fill="none"><path class="draw" d="M16 90 C35 48 64 112 89 67 S139 40 153 78 S191 112 208 52" stroke="#ffc35c" stroke-width="3"/><path class="loop-path" d="M20 112 C72 82 131 125 206 90" stroke="#3998ff" stroke-dasharray="7 9"/><circle class="spin" cx="145" cy="46" r="24" stroke="#ff725e" stroke-dasharray="8 7"/></g></svg></div>
+            <h3>Predictability erodes</h3><p>Weather, water levels, and infrastructure stress make resilience a daily operation.</p><div class="bar"><i style="--w:76%;--c:var(--amber)"></i></div>
+          </article>
+          <article class="force-card">
+            <div class="topline"><span>04 / VISIBILITY</span><span>RESOLUTION ↑</span></div>
+            <div class="force-viz"><svg viewBox="0 0 220 140"><g fill="none" stroke="#43e6df"><rect x="35" y="24" width="150" height="92" rx="4" opacity=".35"/><rect x="55" y="42" width="110" height="56" rx="2"/><path class="scan" d="M55 48H165" stroke-width="3" filter="drop-shadow(0 0 5px #43e6df)"/></g><g fill="#ff725e"><circle cx="70" cy="58" r="3"/><circle cx="119" cy="76" r="3"/><circle cx="150" cy="52" r="3"/><circle cx="92" cy="88" r="3"/></g></svg></div>
+            <h3>Everything becomes legible</h3><p>Condition, ownership, carbon, and custody follow cargo through every handoff.</p><div class="bar"><i style="--w:88%;--c:var(--cyan)"></i></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="slide anatomy" data-title="Inside the 2050 vessel" aria-hidden="true">
+      <span class="slide-no">04 / 12</span>
+      <div class="content">
+        <div class="anatomy-head">
+          <div class="kicker reveal">Vessel anatomy</div>
+          <h2 class="reveal d2">A ship becomes an <span class="accent">adaptive energy platform.</span></h2>
+        </div>
+        <div class="ship-blueprint reveal d3">
+          <svg viewBox="0 0 1200 500" aria-label="Detailed cutaway of a future cargo ship">
+            <defs>
+              <linearGradient id="ahull" x1="0" x2="1"><stop stop-color="#102c40"/><stop offset=".6" stop-color="#1d4a5d"/><stop offset="1" stop-color="#0a1827"/></linearGradient>
+              <pattern id="solar" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="13" height="13" fill="#143952"/><path d="M0 7H13M7 0V13" stroke="#3998ff" stroke-opacity=".45" stroke-width=".5"/></pattern>
+              <filter id="aglow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <path d="M185 305 L850 258 L1030 292 Q979 400 823 418 L305 412 Q205 391 160 341Z" fill="url(#ahull)" stroke="#77b4c5" stroke-width="2"/>
+            <path d="M232 308 L850 268 L962 294 L338 345Z" fill="url(#solar)" stroke="#3998ff"/>
+            <path d="M284 345 L928 302" stroke="#43e6df" stroke-dasharray="5 12" opacity=".65"/>
+            <g fill="#174055" stroke="#6598aa">
+              <rect x="360" y="285" width="72" height="39"/><rect x="436" y="279" width="72" height="39"/><rect x="512" y="274" width="72" height="39"/><rect x="588" y="269" width="72" height="39"/><rect x="664" y="264" width="72" height="39"/><rect x="740" y="259" width="72" height="39"/>
+              <rect x="399" y="244" width="72" height="38"/><rect x="475" y="239" width="72" height="38"/><rect x="551" y="234" width="72" height="38"/><rect x="627" y="229" width="72" height="38"/>
+            </g>
+            <g fill="rgba(67,230,223,.15)" stroke="#43e6df">
+              <path d="M394 244 L405 73 Q449 128 429 242Z"/><path d="M552 234 L563 37 Q610 99 588 231Z"/><path d="M711 224 L722 96 Q759 135 743 222Z"/>
+            </g>
+            <g opacity=".7" stroke="#43e6df"><path d="M405 73L413 243"/><path d="M563 37L574 233"/><path d="M722 96L732 223"/></g>
+            <g>
+              <path d="M315 354H473V390H329Z" fill="#12385a" stroke="#3998ff"/><text x="385" y="376" fill="#7dc1ff" font-family="monospace" font-size="9" text-anchor="middle">BATTERY BUFFER</text>
+              <path d="M484 343H650V392H484Z" fill="#263824" stroke="#7be495"/><text x="567" y="372" fill="#9be7ab" font-family="monospace" font-size="9" text-anchor="middle">GREEN FUEL CELLS</text>
+              <path d="M660 332H820V386H660Z" fill="#432a24" stroke="#ffc35c"/><text x="740" y="363" fill="#ffd690" font-family="monospace" font-size="9" text-anchor="middle">FUEL MODULES</text>
+              <circle cx="910" cy="344" r="34" fill="none" stroke="#ff725e" stroke-width="3"/><g class="spin" stroke="#ff725e"><path d="M910 310V378M876 344H944M886 320L934 368M934 320L886 368"/></g>
+            </g>
+            <g fill="none" stroke-width="1.2">
+              <path class="draw" d="M273 294 L170 207 L64 207" stroke="#43e6df"/><circle cx="273" cy="294" r="4" fill="#43e6df"/>
+              <path class="draw" d="M574 145 L720 105 L1120 105" stroke="#ffc35c"/><circle cx="574" cy="145" r="4" fill="#ffc35c"/>
+              <path class="draw" d="M389 371 L190 449 L98 449" stroke="#3998ff"/><circle cx="389" cy="371" r="4" fill="#3998ff"/>
+              <path class="draw" d="M910 344 L1030 427 L1155 427" stroke="#ff725e"/><circle cx="910" cy="344" r="4" fill="#ff725e"/>
+            </g>
+            <g fill="#91a9b5" font-family="monospace" font-size="8"><text x="905" y="243">BRIDGE / REMOTE READY</text><text x="728" y="406">ENERGY BUS →</text></g>
+          </svg>
+          <div class="scan-line scan"></div>
+          <div class="callout c1"><b>WIND ASSIST</b><span>Rigid sails trim continuously to weather and route.</span></div>
+          <div class="callout c2"><b>DIGITAL TWIN</b><span>Hull, machinery, weather, and cargo simulate together.</span></div>
+          <div class="callout c3"><b>HYBRID ENERGY BUS</b><span>Battery buffering smooths multiple fuel systems.</span></div>
+          <div class="callout c4"><b>ROBOTIC PROPULSOR</b><span>Predictive service happens before efficiency falls.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="slide" data-title="A portfolio of propulsion" aria-hidden="true">
+      <span class="slide-no">05 / 12</span>
+      <div class="content two-col">
+        <div>
+          <div class="kicker reveal">Energy strategy</div>
+          <h2 class="reveal d2">The fuel of 2050 is a <span class="accent">portfolio.</span></h2>
+          <p class="lede reveal d3">No single molecule wins every route. The operating system chooses the lowest-impact combination that the voyage can safely support.</p>
+          <div class="energy-key reveal d4"><i style="color:var(--cyan)">WIND</i><i style="color:var(--blue)">ELECTRIC</i><i style="color:var(--amber)">METHANOL</i><i style="color:var(--green)">H₂ / NH₃</i></div>
+        </div>
+        <div class="visual-shell energy-board reveal d3">
+          <div class="fuel-matrix">
+            <div><span class="micro">Applicability by voyage type</span></div>
+            <div class="matrix">
+              <div></div><div>WIND</div><div>ELECTRIC</div><div>METHANOL</div><div>H₂ / NH₃</div>
+              <div>HARBOR</div><div class="cell" style="--v:25%;--c:var(--cyan)"></div><div class="cell" style="--v:92%;--c:var(--blue);--delay:.5s"></div><div class="cell" style="--v:40%;--c:var(--amber);--delay:.6s"></div><div class="cell" style="--v:32%;--c:var(--green);--delay:.7s"></div>
+              <div>SHORT SEA</div><div class="cell" style="--v:58%;--c:var(--cyan)"></div><div class="cell" style="--v:78%;--c:var(--blue);--delay:.5s"></div><div class="cell" style="--v:62%;--c:var(--amber);--delay:.6s"></div><div class="cell" style="--v:50%;--c:var(--green);--delay:.7s"></div>
+              <div>DEEP SEA</div><div class="cell" style="--v:86%;--c:var(--cyan)"></div><div class="cell" style="--v:20%;--c:var(--blue);--delay:.5s"></div><div class="cell" style="--v:82%;--c:var(--amber);--delay:.6s"></div><div class="cell" style="--v:74%;--c:var(--green);--delay:.7s"></div>
+              <div>SPECIALIST</div><div class="cell" style="--v:46%;--c:var(--cyan)"></div><div class="cell" style="--v:55%;--c:var(--blue);--delay:.5s"></div><div class="cell" style="--v:70%;--c:var(--amber);--delay:.6s"></div><div class="cell" style="--v:88%;--c:var(--green);--delay:.7s"></div>
+            </div>
+          </div>
+          <div class="energy-flow">
+            <div><span class="micro">Three voyage profiles</span></div>
+            <div>
+              <div class="route-case"><header>OSLO → ROTTERDAM <span>SHORT SEA</span></header><div class="route-line"></div><small class="micro">Electric + wind / shore recharge</small></div>
+              <div class="route-case"><header>SINGAPORE → HAMBURG <span>DEEP SEA</span></header><div class="route-line"></div><small class="micro">Methanol + wind / adaptive speed</small></div>
+              <div class="route-case"><header>PERTH → YOKOHAMA <span>BULK</span></header><div class="route-line"></div><small class="micro">Ammonia + wind / port buffer</small></div>
+            </div>
+            <p class="micro">Illustrative fit — infrastructure and lifecycle carbon remain decisive.</p>
+          </div>
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="slide" data-title="Autonomy by degrees" aria-hidden="true">
+      <span class="slide-no">06 / 12</span>
+      <div class="content autonomy-grid">
+        <div>
+          <div class="kicker reveal">Autonomy is a ladder</div>
+          <h2 class="reveal d2">Machines handle precision.<br><span class="accent">Humans hold authority.</span></h2>
+          <p class="lede reveal d3">The plausible future is supervised independence—not uncontrolled ghost ships.</p>
+          <div class="level-list reveal d4">
+            <div class="level"><b>L1</b><span>Decision support</span><i>NOW</i></div>
+            <div class="level"><b>L2</b><span>Remote assistance</span><i>SCALING</i></div>
+            <div class="level"><b>L3</b><span>Conditional autonomy</span><i>DEFINED LANES</i></div>
+            <div class="level"><b>L4</b><span>Fleet orchestration</span><i>2050 STATE</i></div>
+          </div>
+        </div>
+        <div class="visual-shell control-room reveal d3">
+          <div class="sea-lane">
+            <svg viewBox="0 0 560 560">
+              <defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#31566a"/></pattern></defs>
+              <rect width="560" height="560" fill="url(#dots)"/>
+              <path d="M65 510 C100 390 270 340 300 220 C330 110 440 120 515 55" fill="none" stroke="#43e6df" stroke-width="32" opacity=".04"/>
+              <path class="loop-path" d="M65 510 C100 390 270 340 300 220 C330 110 440 120 515 55" fill="none" stroke="#43e6df" stroke-width="1.5" stroke-dasharray="6 12"/>
+              <g fill="none" stroke="#ff725e" opacity=".65"><circle cx="164" cy="382" r="38"/><circle cx="164" cy="382" r="47" stroke-dasharray="3 7"/><path d="M164 320V444M102 382H226"/></g>
+              <g font-family="monospace" font-size="8" fill="#9eb0bc"><text x="25" y="30">CORRIDOR A7 / SUPERVISED</text><text x="333" y="234">WEATHER CELL / AVOID</text><text x="84" y="532">ORIGIN / 04:20 UTC</text></g>
+            </svg>
+            <i class="lane-vessel travel"></i>
+          </div>
+          <div class="mini-panel">
+            <header><span>Decision stack</span><span class="accent">LIVE</span></header>
+            <div class="decision-bars"><div><i style="--w:88%;--c:var(--cyan)"></i></div><div><i style="--w:67%;--c:var(--blue)"></i></div><div><i style="--w:54%;--c:var(--amber)"></i></div><div><i style="--w:79%;--c:var(--green)"></i></div></div>
+            <div class="human-token"><i>H</i><span>Human approval required for risk-envelope change.</span></div>
+          </div>
+          <div class="mini-panel">
+            <header><span>Confidence</span><span>97.2%</span></header>
+            <svg viewBox="0 0 170 75"><path d="M4 60 C25 55 35 26 56 38 S85 64 102 31 S135 17 166 23" fill="none" stroke="#43e6df" stroke-width="2"/><path d="M4 66H166" stroke="#315064"/></svg>
+          </div>
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="slide" data-title="Cargo gains a voice" aria-hidden="true">
+      <span class="slide-no">07 / 12</span>
+      <div class="content two-col">
+        <div>
+          <div class="kicker reveal">The intelligent container</div>
+          <h2 class="reveal d2">Cargo becomes a <span class="accent">participant.</span></h2>
+          <p class="lede reveal d3">A container carries identity, condition, permissions, provenance, carbon history, and a preferred next move.</p>
+        </div>
+        <div class="cargo-stage reveal d3">
+          <div class="container-lab">
+            <span class="hud-label" style="left:18px;top:18px">OBJECT DIGITAL TWIN / NX–48</span>
+            <div class="cargo-box float"></div><div class="seal pulse">SEAL</div>
+            <i class="sensor-node pulse" data-label="TEMPERATURE / 2.8°C" style="--x:24%;--y:28%;--c:var(--cyan)"></i>
+            <i class="sensor-node pulse" data-label="SHOCK / NOMINAL" style="--x:67%;--y:35%;--c:var(--amber)"></i>
+            <i class="sensor-node pulse" data-label="CUSTODY / VERIFIED" style="--x:28%;--y:73%;--c:var(--green)"></i>
+            <i class="sensor-node pulse" data-label="CARBON / 418 KG" style="--x:70%;--y:70%;--c:var(--coral)"></i>
+            <div class="scan-line scan" style="left:14%;right:14%;top:35%"></div>
+          </div>
+          <div class="cargo-data">
+            <div class="cargo-summary"><span>CONDITION SCORE</span><strong>98.7</strong><p class="micro">Within pharmaceutical envelope</p></div>
+            <div class="telemetry">
+              <span class="micro">12-hour telemetry</span>
+              <svg viewBox="0 0 280 210">
+                <g stroke="#244457"><path d="M10 30H270M10 75H270M10 120H270M10 165H270M55 15V190M115 15V190M175 15V190M235 15V190"/></g>
+                <path class="draw" d="M10 104 C34 98 43 111 65 105 S99 91 119 99 S151 112 170 101 S204 87 222 96 S250 107 270 93" fill="none" stroke="#43e6df" stroke-width="2"/>
+                <path class="draw" d="M10 150 C42 144 56 151 82 145 S122 132 148 141 S190 155 211 143 S247 130 270 137" fill="none" stroke="#ff725e" stroke-width="1.5" opacity=".75"/>
+                <g fill="#9eb0bc" font-family="monospace" font-size="7"><text x="10" y="204">00:00</text><text x="120" y="204">06:00</text><text x="238" y="204">12:00</text></g>
+              </svg>
+            </div>
+            <div class="cargo-events"><div><span>Digital seal verified</span><time>12:04</time></div><div><span>Rail slot reserved</span><time>12:05</time></div><div><span>Carbon ledger updated</span><time>12:06</time></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="slide" data-title="The port becomes an OS" aria-hidden="true">
+      <span class="slide-no">08 / 12</span>
+      <div class="content port-layout">
+        <div class="port-head">
+          <div><div class="kicker reveal">Port choreography</div><h2 class="reveal d2">The terminal becomes an <span class="accent">operating system.</span></h2></div>
+          <p class="lede reveal d3">Berth, cranes, energy, customs, rail, and road align before the vessel crosses the breakwater.</p>
+        </div>
+        <div class="port-ops reveal d4">
+          <div class="port-map">
+            <span class="hud-label" style="left:18px;top:17px">BERTH 04 / LIVE ORCHESTRATION</span>
+            <svg viewBox="0 0 980 440" preserveAspectRatio="none" aria-label="Animated smart port">
+              <defs><pattern id="yard" width="32" height="20" patternUnits="userSpaceOnUse"><rect width="28" height="16" rx="1" fill="#173245" stroke="#315268" stroke-width=".5"/></pattern></defs>
+              <rect y="158" width="980" height="282" fill="#0b1821"/><rect x="320" y="180" width="660" height="260" fill="url(#yard)" opacity=".85"/>
+              <path d="M0 110 C170 92 230 128 365 105 L365 250 L0 250Z" fill="#0b3149"/>
+              <path d="M0 175 L325 166 L384 208 L287 250 L0 250Z" fill="#15384b" stroke="#5d9db3"/>
+              <g fill="#194359" stroke="#5b99ad"><rect x="35" y="156" width="50" height="26"/><rect x="90" y="153" width="50" height="26"/><rect x="145" y="150" width="50" height="26"/><rect x="200" y="147" width="50" height="26"/></g>
+              <g stroke="#58cbd2" fill="none" stroke-width="5">
+                <path d="M350 335V95H475V335M350 118H475L523 196"/><path d="M572 335V71H697V335M572 95H697L750 175"/>
+              </g>
+              <g stroke="#ff725e" fill="none" stroke-width="2"><path d="M435 118V225" class="crane-hook"/><path d="M662 95V204" class="crane-hook delay"/></g>
+              <g fill="#ff725e"><rect class="crane-hook" x="416" y="218" width="38" height="16"/><rect class="crane-hook delay" x="643" y="197" width="38" height="16"/></g>
+              <g class="agv"><rect x="40" y="345" width="54" height="22" rx="5" fill="#43e6df"/><rect x="48" y="337" width="38" height="10" fill="#24566b"/></g>
+              <g class="agv delay"><rect x="40" y="392" width="54" height="22" rx="5" fill="#ffc35c"/><rect x="48" y="384" width="38" height="10" fill="#6b5124"/></g>
+              <path class="loop-path" d="M306 354H955M306 401H955" stroke="#43e6df" stroke-dasharray="5 11" opacity=".45"/>
+              <g fill="#43e6df" font-family="monospace" font-size="8"><text x="760" y="42">YARD DENSITY / 71%</text><text x="26" y="93">VESSEL ARRIVAL / −00:18</text></g>
+            </svg>
+          </div>
+          <div class="port-kpis">
+            <div class="port-kpi" style="--c:var(--cyan);--w:86%"><small>Berth readiness</small><strong>86%</strong><i></i></div>
+            <div class="port-kpi" style="--c:var(--green);--w:94%"><small>Customs cleared</small><strong>94%</strong><i></i></div>
+            <div class="port-kpi" style="--c:var(--amber);--w:71%"><small>Yard capacity</small><strong>71%</strong><i></i></div>
+            <div class="port-kpi" style="--c:var(--coral);--w:63%"><small>Energy buffer</small><strong>63%</strong><i></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="slide" data-title="The network sees ahead" aria-hidden="true">
+      <span class="slide-no">09 / 12</span>
+      <div class="content two-col">
+        <div>
+          <div class="kicker reveal">Network intelligence</div>
+          <h2 class="reveal d2">A route is no longer a line.<br>It is a <span class="accent">live decision.</span></h2>
+          <p class="lede reveal d3">Weather, inventory, congestion, energy, and risk continuously re-price the next best handoff.</p>
+          <div class="network-events reveal d4">
+            <div><time>08:14</time><span>Typhoon probability exceeds corridor threshold.</span></div>
+            <div><time>08:14</time><span>Network simulates 14,208 alternatives.</span></div>
+            <div><time>08:15</time><span>Busan handoff shifts to Yokohama.</span></div>
+            <div><time>08:15</time><span>Cargo ETA changes by +2h; inventory remains safe.</span></div>
+          </div>
+        </div>
+        <div class="visual-shell globe-stage reveal d3">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <span class="hud-label" style="left:22px;top:22px">GLOBAL FLOW MODEL / 14,208 ACTIVE OPTIONS</span>
+          <svg viewBox="0 0 800 560" aria-label="Animated global cargo network">
+            <defs><radialGradient id="globe" cx=".42" cy=".38"><stop stop-color="#153c54"/><stop offset=".7" stop-color="#0a2031"/><stop offset="1" stop-color="#06111c"/></radialGradient></defs>
+            <circle cx="400" cy="290" r="210" fill="url(#globe)" stroke="#4a8198"/>
+            <g fill="none" stroke="#39718a" opacity=".58"><ellipse cx="400" cy="290" rx="210" ry="75"/><ellipse cx="400" cy="290" rx="210" ry="140"/><ellipse cx="400" cy="290" rx="92" ry="210"/><ellipse cx="400" cy="290" rx="158" ry="210"/><path d="M190 290H610"/></g>
+            <g fill="#153e50" stroke="#4b8298" stroke-width=".5">
+              <path d="M267 184 L310 152 366 161 391 192 371 220 322 223 292 253 248 233Z"/><path d="M424 147 L476 155 518 190 501 223 532 251 499 290 460 276 438 231 401 208Z"/><path d="M370 269 L420 255 456 290 446 340 417 392 386 357 379 313Z"/><path d="M507 322 L554 315 578 354 547 380 509 362Z"/>
+            </g>
+            <g fill="none" stroke-width="2">
+              <path class="loop-path" d="M110 380 C250 70 480 80 690 270" stroke="#ff725e" stroke-dasharray="7 10"/>
+              <path class="loop-path" d="M120 260 C320 510 530 480 700 160" stroke="#43e6df" stroke-dasharray="7 10"/>
+              <path class="loop-path" d="M180 120 C350 270 500 270 690 410" stroke="#ffc35c" stroke-dasharray="7 10"/>
+            </g>
+            <g fill="#fff"><circle cx="267" cy="184" r="4"/><circle cx="518" cy="190" r="4"/><circle cx="417" cy="392" r="4"/><circle cx="554" cy="315" r="4"/></g>
+            <g fill="#9eb0bc" font-family="monospace" font-size="8"><text x="260" y="171">LAX</text><text x="520" y="177">SHA</text><text x="421" y="407">CPT</text><text x="558" y="307">SYD</text></g>
+          </svg>
+          <i class="packet p1 travel"></i><i class="packet p2 travel"></i><i class="packet p3 travel"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide" data-title="Progress needs guardrails" aria-hidden="true">
+      <span class="slide-no">10 / 12</span>
+      <div class="content two-col">
+        <div>
+          <div class="kicker reveal">The hard questions</div>
+          <h2 class="reveal d2">The biggest risks are <span class="coral">not only technical.</span></h2>
+          <p class="lede reveal d3">A high-performance maritime system still fails if trust, equity, accountability, or cyber resilience are missing.</p>
+        </div>
+        <div class="visual-shell risk-board reveal d3">
+          <div class="radar">
+            <span class="hud-label" style="left:18px;top:18px">RISK ENVELOPE / 2050</span>
+            <svg viewBox="0 0 520 500">
+              <g transform="translate(260 250)" fill="none" stroke="#315366">
+                <polygon points="0,-190 181,-59 112,154 -112,154 -181,-59"/><polygon points="0,-142 136,-44 84,116 -84,116 -136,-44"/><polygon points="0,-95 90,-29 56,77 -56,77 -90,-29"/><polygon points="0,-48 45,-15 28,39 -28,39 -45,-15"/>
+                <path d="M0 0V-190M0 0L181-59M0 0L112 154M0 0L-112 154M0 0L-181-59"/>
+              </g>
+              <polygon class="draw" points="260,81 405,203 344,366 164,382 112,202" fill="rgba(255,114,94,.16)" stroke="#ff725e" stroke-width="2"/>
+              <g fill="#ff725e"><circle cx="260" cy="81" r="5"/><circle cx="405" cy="203" r="5"/><circle cx="344" cy="366" r="5"/><circle cx="164" cy="382" r="5"/><circle cx="112" cy="202" r="5"/></g>
+              <g fill="#9eb0bc" font-family="monospace" font-size="8" text-anchor="middle"><text x="260" y="42">CYBER</text><text x="463" y="191">FUEL PROOF</text><text x="366" y="417">EQUITY</text><text x="145" y="432">LIABILITY</text><text x="57" y="192">SKILLS</text></g>
+            </svg>
+          </div>
+          <div class="risk-list">
+            <div class="risk-row"><b>01</b><div><h3>Cyber resilience</h3><p>Design safe degradation, not perfect defense.</p></div><span class="severity coral">HIGH</span></div>
+            <div class="risk-row"><b>02</b><div><h3>Fuel integrity</h3><p>Prove lifecycle carbon from source to wake.</p></div><span class="severity amber">WATCH</span></div>
+            <div class="risk-row"><b>03</b><div><h3>Port inequality</h3><p>Keep smaller economies connected.</p></div><span class="severity coral">HIGH</span></div>
+            <div class="risk-row"><b>04</b><div><h3>Accountability</h3><p>Keep algorithmic responsibility human.</p></div><span class="severity accent">DESIGN</span></div>
+          </div>
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide" data-title="People move up the stack" aria-hidden="true">
+      <span class="slide-no">11 / 12</span>
+      <div class="content two-col">
+        <div>
+          <div class="kicker reveal">The human role</div>
+          <h2 class="reveal d2">People move <span class="accent">up the stack.</span></h2>
+          <p class="lede reveal d3">Automation removes repetition, not responsibility. Work moves toward systems thinking, remote operations, safety, and judgment under uncertainty.</p>
+        </div>
+        <div class="people-board reveal d3">
+          <div class="role-orbit">
+            <span class="hud-label" style="left:18px;top:18px">HUMAN AUTHORITY MAP</span>
+            <div class="orbit-ring spin"></div><div class="orbit-ring r2 spin" style="animation-direction:reverse"></div>
+            <div class="role-center">MARITIME<br>MISSION<br>CONTROL</div>
+            <span class="role-chip" style="--x:8%;--y:27%">CYBER OFFICER</span><span class="role-chip" style="--x:63%;--y:17%">ENERGY PLANNER</span>
+            <span class="role-chip" style="--x:67%;--y:72%">ROBOTICS TECH</span><span class="role-chip" style="--x:7%;--y:75%">RESILIENCE LEAD</span>
+            <span class="role-chip" style="--x:36%;--y:8%">FLEET ORCHESTRATOR</span>
+          </div>
+          <div class="handoff">
+            <header><b>Exception handoff / AV-204</b><span>HUMAN ENGAGED</span></header>
+            <div class="handoff-flow">
+              <div class="handoff-step" style="--c:var(--cyan)"><b>01</b><span>AI detects route-envelope conflict</span><i>08:14:02</i></div>
+              <div class="handoff-step" style="--c:var(--blue)"><b>02</b><span>Digital twin simulates safe options</span><i>+ 0.8 SEC</i></div>
+              <div class="handoff-step" style="--c:var(--amber)"><b>03</b><span>Operator reviews tradeoffs</span><i>HUMAN</i></div>
+              <div class="handoff-step" style="--c:var(--green)"><b>04</b><span>Fleet plan approved and distributed</span><i>VERIFIED</i></div>
+            </div>
+            <div class="skill-strip"><span>MARITIME LAW</span><span>SYSTEMS SAFETY</span><span>DATA LITERACY</span><span>CRISIS JUDGMENT</span><span>ROBOTICS</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="slide finale" data-title="Move more, waste less" aria-hidden="true">
+      <span class="slide-no">12 / 12</span>
+      <div class="content">
+        <div class="kicker reveal" style="justify-content:center">The destination</div>
+        <h2 class="reveal d2">Move more. <span class="accent">Waste less.</span><br>Know sooner.</h2>
+        <p class="lede reveal d3">The best maritime system of 2050 will be clean, trusted, resilient—and quietly intelligent.</p>
+        <div class="convergence reveal d4">
+          <svg viewBox="0 0 1000 220">
+            <defs><filter id="fg"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+            <g fill="none" stroke-width="2">
+              <path class="loop-path" d="M20 40 C220 40 300 110 500 110 S780 40 980 40" stroke="#3998ff" stroke-dasharray="7 12"/>
+              <path class="loop-path" d="M20 85 C220 85 300 110 500 110 S780 85 980 85" stroke="#43e6df" stroke-dasharray="7 12"/>
+              <path class="loop-path" d="M20 135 C220 135 300 110 500 110 S780 135 980 135" stroke="#ffc35c" stroke-dasharray="7 12"/>
+              <path class="loop-path" d="M20 180 C220 180 300 110 500 110 S780 180 980 180" stroke="#ff725e" stroke-dasharray="7 12"/>
+            </g>
+            <circle class="pulse" cx="500" cy="110" r="17" fill="#43e6df" filter="url(#fg)"/><circle cx="500" cy="110" r="46" fill="none" stroke="#43e6df" opacity=".25"/><circle cx="500" cy="110" r="72" fill="none" stroke="#43e6df" stroke-dasharray="3 8" class="spin"/>
+            <g fill="#9eb0bc" font-family="monospace" font-size="8"><text x="20" y="28">VESSELS</text><text x="20" y="74">CARGO</text><text x="20" y="158">PORTS</text><text x="20" y="204">PEOPLE</text><text x="930" y="114">FLOW</text></g>
+          </svg>
+        </div>
+        <div class="final-tags reveal d5"><span>CLEAN</span><span>VISIBLE</span><span>ADAPTIVE</span><span>HUMAN-GOVERNED</span></div>
+      </div>
+    </section>
+  </main>
+
+    <div class="progress" aria-hidden="true"><i></i></div>
+    <div class="controls">
+      <button class="control" id="overviewBtn" aria-label="Open slide overview" title="Overview (O)">⌘</button>
+      <button class="control" id="motionBtn" aria-label="Pause animations" title="Pause animations (M)"><i class="motion-icon"></i></button>
+      <button class="control" id="prevBtn" aria-label="Previous slide" title="Previous (←)">←</button>
+      <button class="control" id="nextBtn" aria-label="Next slide" title="Next (→)">→</button>
+      <button class="control" id="fullBtn" aria-label="Toggle fullscreen" title="Fullscreen (F)">⛶</button>
+
+  <script>
+    (() => {
+      const deck = document.getElementById("deck");
+      const slides = [...document.querySelectorAll(".slide")];
+      const counter = document.querySelector(".counter");
+      const bar = document.querySelector(".progress i");
+      const prev = document.getElementById("prevBtn");
+      const next = document.getElementById("nextBtn");
+      const motion = document.getElementById("motionBtn");
+      const full = document.getElementById("fullBtn");
+      const overview = document.getElementById("overview");
+      let current = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+      let touchX = null;
+      let wheelLock = false;
+
+      slides.forEach((slide, i) => {
+        const button = document.createElement("button");
+        button.className = "thumb";
+        button.innerHTML = "<b>" + String(i + 1).padStart(2, "0") + "</b><span>" + slide.dataset.title + "</span>";
+        button.addEventListener("click", () => { show(i); toggleOverview(false); });
+        overview.appendChild(button);
+      });
+
+      function show(index) {
+        current = Math.max(0, Math.min(slides.length - 1, index));
+        slides.forEach((slide, i) => {
+          const active = i === current;
+          slide.classList.toggle("active", active);
+          slide.classList.toggle("was-before", i < current);
+          slide.setAttribute("aria-hidden", active ? "false" : "true");
+        });
+        [...overview.children].forEach((t, i) => t.classList.toggle("current", i === current));
+        counter.textContent = String(current + 1).padStart(2, "0") + " / " + String(slides.length).padStart(2, "0");
+        bar.style.width = ((current + 1) / slides.length * 100) + "%";
+        prev.disabled = current === 0;
+        next.disabled = current === slides.length - 1;
+        history.replaceState(null, "", "#" + (current + 1));
+      }
+
+      function toggleOverview(force) {
+        const open = typeof force === "boolean" ? force : !overview.classList.contains("open");
+        overview.classList.toggle("open", open);
+        overview.setAttribute("aria-hidden", open ? "false" : "true");
+        if (open) overview.children[current].focus();
+      }
+
+      function toggleMotion() {
+        const paused = deck.classList.toggle("motion-paused");
+        motion.setAttribute("aria-label", paused ? "Resume animations" : "Pause animations");
+        motion.title = paused ? "Resume animations (M)" : "Pause animations (M)";
+      }
+
+      function toggleFull() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+
+      prev.addEventListener("click", () => show(current - 1));
+      next.addEventListener("click", () => show(current + 1));
+      motion.addEventListener("click", toggleMotion);
+      full.addEventListener("click", toggleFull);
+      document.getElementById("overviewBtn").addEventListener("click", () => toggleOverview());
+
+      addEventListener("keydown", e => {
+        if (overview.classList.contains("open") && e.key === "Escape") return toggleOverview(false);
+        if (["ArrowRight", "ArrowDown", " ", "PageDown"].includes(e.key)) { e.preventDefault(); show(current + 1); }
+        if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) { e.preventDefault(); show(current - 1); }
+        if (e.key === "Home") show(0);
+        if (e.key === "End") show(slides.length - 1);
+        if (e.key.toLowerCase() === "o") toggleOverview();
+        if (e.key.toLowerCase() === "m") toggleMotion();
+        if (e.key.toLowerCase() === "f") toggleFull();
+      });
+
+      addEventListener("touchstart", e => { touchX = e.changedTouches[0].clientX; }, { passive: true });
+      addEventListener("touchend", e => {
+        if (touchX === null) return;
+        const dx = e.changedTouches[0].clientX - touchX;
+        if (Math.abs(dx) > 48) show(current + (dx < 0 ? 1 : -1));
+        touchX = null;
+      }, { passive: true });
+
+      addEventListener("wheel", e => {
+        if (wheelLock || overview.classList.contains("open") || Math.abs(e.deltaY) < 24) return;
+        wheelLock = true;
+        show(current + (e.deltaY > 0 ? 1 : -1));
+        setTimeout(() => wheelLock = false, 650);
+      }, { passive: true });
+
+      addEventListener("hashchange", () => show((parseInt(location.hash.slice(1), 10) || 1) - 1));
+      show(current);
+    })();
+  </script>
